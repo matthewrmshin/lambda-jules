@@ -1,5 +1,5 @@
 <p>
-  <a href="https://github.com/matthewrmshin/myawsdocs/actions"><img alt="GitHub Actions status" src="https://github.com/matthewrmshin/myawsdocs/workflows/Python%20application/badge.svg"></a>
+  <a href="https://github.com/matthewrmshin/lambda-jules/actions"><img alt="GitHub Actions status" src="https://github.com/matthewrmshin/lambda-jules/workflows/Python%20application/badge.svg"></a>
 </p>
 
 # What is this?
