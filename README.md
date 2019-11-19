@@ -55,4 +55,5 @@ with JULES input. Inspect the `rose-app.conf`. Set:
 
 ## What's Next?
 
+Add Cloudformation for API Gateway. Convert to SAM template.
 Set up tests in AWS CodePipeline.
