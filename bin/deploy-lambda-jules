@@ -1,0 +1,41 @@
+#!/bin/bash
+# -----------------------------------------------------------------------------
+# (C) Copyright 2019 British Crown (Met Office) & Contributors.
+# -----------------------------------------------------------------------------
+set -eu
+set -o pipefail
+
+cfn-deploy() {
+    local NAME="$1"
+    shift 1
+    aws cloudformation deploy \
+        --stack-name="${NAME}" \
+        --template-file="${HERED}/cfn/${NAME}.cfn.yaml" \
+        "$@" \
+        --tags "$(<"${HERED}/cfn/tags.txt")" 
+}
+
+if ! aws --version 1>'/dev/null'; then
+    echo "Sorry, this script requires 'aws'." >&2
+    exit 1
+fi
+
+if [[ ! -f './lambda-jules.zip' ]]; then
+    echo './lambda-jules.zip not found.' >&2
+    exit 1
+fi
+JULES_SOURCE="$1"
+#JULES_TEST_SOURCE="$2"
+
+# Work in a temporary space
+HERED="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Deploy
+cfn-deploy 'package-bucket'
+PACKAGE_BUCKET="$( \
+    aws cloudformation list-exports \
+    --output=text --query='Exports[?name=="package-bucket"].Value')"
+aws s3 cp "./lambda-jules.zip" "s3://${PACKAGE_BUCKET}/"
+cfn-deploy 'lambda-jules' --capabilities='CAPABILITY_IAM'
+
+exit

@@ -1,0 +1,14 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: S3 Bucket for Lambda Packages
+
+Resources:
+  Bucket:
+    Type: AWS::S3::Bucket
+
+Outputs:
+  StackBucket:
+    Description: Bucket created by this stack for hosting lambda source
+    Value: !Ref Bucket
+    Export:
+      Name: !Sub "${AWS::AccountId}-${AWS::StackName}"

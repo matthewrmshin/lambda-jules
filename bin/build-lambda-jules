@@ -1,0 +1,71 @@
+#!/bin/bash
+# -----------------------------------------------------------------------------
+# (C) Copyright 2019 British Crown (Met Office) & Contributors.
+# -----------------------------------------------------------------------------
+set -eu
+set -o pipefail
+
+for util in git docker zip; do
+    if ! "${util}" --version 1>'/dev/null'; then
+        echo "Sorry, this script requires '${util}'." >&2
+        exit 1
+    fi
+done
+
+if [[ $# != 1 ]]; then
+    echo "Usage: $(basename "$0") JULES_SOURCE" >&2
+    exit 1
+fi
+JULES_SOURCE="$1"
+#JULES_TEST_SOURCE="$2"
+
+# Work in a temporary space
+HERED="$(cd "$(dirname "$0")/.." && pwd)"
+ORIGD="${PWD}"
+WORKD="$(mktemp -d)"
+pushd "${WORKD}"  # "${ORIGD}" => "${WORKD}"
+
+# Download+build Dockerfile that is used for building the executables and
+# shared libraries.
+IMAGE_ENV='lambdafort'
+git clone \
+    'https://github.com/matthewrmshin/lambda-gfortran-fcm-make-netcdf.git' \
+    "${IMAGE_ENV}"
+pushd "${IMAGE_ENV}" # "${WORKD}" => "${WORKD}/${IMAGE_ENV}"
+docker build -t "${IMAGE_ENV}" .
+popd   # "${WORKD}/${IMAGE_ENV}" => "${WORKD}"
+
+# Build JULES executable
+docker run --rm \
+    -u "$(id -u):$(id -g)" \
+    -v "${JULES_SOURCE}:/opt/jules" \
+    -v "${HERED}/etc/fcm-make/platform/lambda.cfg:/opt/jules/etc/fcm-make/platform/lambda.cfg" \
+    -v "${PWD}:/tmp/jules-build" \
+    "${IMAGE_ENV}" \
+    env JULES_PLATFORM='lambda' \
+    fcm make -C '/tmp/jules-build' -f '/opt/jules/etc/fcm-make/make.cfg' \
+    'build.target=jules.exe'
+
+# Prepare the package
+mkdir -p 'package/bin' 'package/lib'
+cp -p 'build/bin/jules.exe' 'package/bin/'
+docker run --rm -u "$(id -u):$(id -g)" -v "${PWD}/package/lib:/tmp/package/lib" \
+    "${IMAGE_ENV}" \
+    bash -c 'cp -p /var/task/lib/*.so* /tmp/package/lib/'
+#cp -pr "${JULES_TEST_SOURCE}" 'package/data'
+cp -pr "${HERED}/task/"* 'package/'
+
+# Test the package
+#docker run --rm -u "$(id -u):$(id -g)" -v "${PWD}/package:/var/task" \
+#    'lambci/lambda:python3.7' 'index.handler'
+
+# Create the package zip file
+pushd 'package'  # "${WORKD}" => "${WORKD}/package"
+zip "${ORIGD}/lambda-jules.zip" 'index.py' 'bin/'* 'lib/'*
+popd  # "${WORKD}/package" => "${WORKD}"
+
+popd  # "${WORKD}" => "${ORIGD}"
+rm -fr "${WORKD}"
+#docker rmi "${IMAGE_ENV}"
+
+exit

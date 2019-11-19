@@ -1,0 +1,39 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Sample to show how to wrap Fortran executable with runtime
+
+Parameters:
+  PackageBucket:
+    Default: package-bucket
+    Description: Name of stack that creates bucket for lambda packages
+    Type: String
+
+Resources:
+  SampleLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSLambdaExecute
+  SampleFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          Fn::ImportValue: !Sub "${AWS::AccountId}-${PackageBucket}"
+        S3Key: lambda-jules.zip
+      Description: Run JULES
+      FunctionName: jules
+      Handler: index.handler
+      MemorySize: 128
+      Role: !GetAtt SampleLambdaExecutionRole.Arn
+      Runtime: python3.8
+      Timeout: 120
