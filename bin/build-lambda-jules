@@ -25,17 +25,11 @@ ORIGD="${PWD}"
 WORKD="$(mktemp -d)"
 pushd "${WORKD}"  # "${ORIGD}" => "${WORKD}"
 
-# Download+build Dockerfile that is used for building the executables and
-# shared libraries.
-IMAGE_ENV='lambdafort'
-git clone \
-    'https://github.com/matthewrmshin/lambda-gfortran-fcm-make-netcdf.git' \
-    "${IMAGE_ENV}"
-pushd "${IMAGE_ENV}" # "${WORKD}" => "${WORKD}/${IMAGE_ENV}"
-docker build -t "${IMAGE_ENV}" .
-popd   # "${WORKD}/${IMAGE_ENV}" => "${WORKD}"
-
 # Build JULES executable
+# -u ... As current user
+# -v ... Mount the JULES source
+# -v ... Inject a lambda.cfg build configuration file
+# -v ... Build in current working directory
 docker run --rm \
     -u "$(id -u):$(id -g)" \
     -v "${JULES_SOURCE}:/opt/jules" \
@@ -47,6 +41,7 @@ docker run --rm \
     'build.target=jules.exe'
 
 # Prepare the package
+# - Make sure shared object libraries are in place
 mkdir -p 'package/bin' 'package/lib'
 cp -p 'build/bin/jules.exe' 'package/bin/'
 docker run --rm -u "$(id -u):$(id -g)" -v "${PWD}/package/lib:/tmp/package/lib" \
