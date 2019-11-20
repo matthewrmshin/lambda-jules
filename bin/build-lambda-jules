@@ -30,6 +30,7 @@ pushd "${WORKD}"  # "${ORIGD}" => "${WORKD}"
 # -v ... Mount the JULES source
 # -v ... Inject a lambda.cfg build configuration file
 # -v ... Build in current working directory
+IMAGE_ENV='matthewrmshin/lambda-gfortran-fcm-make-netcdf'
 docker run --rm \
     -u "$(id -u):$(id -g)" \
     -v "${JULES_SOURCE}:/opt/jules" \

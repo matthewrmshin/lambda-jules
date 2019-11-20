@@ -24,7 +24,7 @@ if [[ ! -f './lambda-jules.zip' ]]; then
     echo './lambda-jules.zip not found.' >&2
     exit 1
 fi
-JULES_SOURCE="$1"
+#JULES_SOURCE="$1"
 #JULES_TEST_SOURCE="$2"
 
 # Work in a temporary space
