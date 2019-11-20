@@ -1,6 +1,6 @@
-"""Wrap JULES to run under in the AWS Lambda Python 3.7 Runtime.
+"""Run JULES using an AWS Lambda Python 3.7 Runtime.
 
-Input: `event['body']` is expected to contain base64 encoded bytes that decode
+Input: The request body is expected to contain base64 encoded bytes that decode
 into a tar-gzip file containing the essential input files to JULES, including
 namelists, ancilliary files and forcing files. The tar-gzip archive should have
 all files in a flat directory at the root level. The output directory setting
@@ -20,8 +20,30 @@ import tarfile
 from tempfile import TemporaryDirectory
 
 
-def handler(event: dict, context) -> dict:
-    """Handle the lambda call.
+def handler(event: dict, _) -> dict:
+    """Handle the lambda call."""
+    http_method = event.get('httpMethod')
+    if http_method == 'POST':
+        return {
+            'statusCode': 200,
+            'body': run_jules(event),
+            'headers': {'content-type': 'application/octet-stream'},
+            'isBase64Encoded': True,
+        }
+    elif http_method == 'GET':
+        return {
+            'statusCode': 200,
+            'body': __doc__,
+        }
+    else:
+        return {
+            'statusCode': 405,
+            'body': f'{http_method} not supported',
+        }
+
+
+def run_jules(event: dict) -> dict:
+    """Run Jules.
 
     Create and change into a temporary directory.
     Unpack the input there.
@@ -32,32 +54,27 @@ def handler(event: dict, context) -> dict:
     tempdir = TemporaryDirectory()
     os.chdir(tempdir.name)
     os.makedirs('output')
-    unpack_input(event)
+    unpack_input(event['body'])
     # Set up executable and shared library path
     mybin = os.path.join(os.path.dirname(__file__), 'bin', 'jules.exe')
     try:
         run([mybin], check=True)
-        return {
-            'statusCode': 200,
-            'body': pack_output(),
-            'headers': {'content-type': 'application/octet-stream'},
-            'isBase64Encoded': True,
-        }
+        return pack_output()
     finally:
         os.chdir('/var/task')
         tempdir.cleanup()
 
 
-def unpack_input(event: dict) -> None:
-    """Unpack the input bytes in `event['body']` into the current directory.
+def unpack_input(body: str) -> None:
+    """Unpack the input bytes in `body` into the current directory.
 
-    `event['body']` is expected to contain base64 encoded bytes that decode
-    into a tar-gzip file containing the essential input files to JULES,
-    including namelists, ancilliary files and forcing files. The tar-gzip
-    archive should have all files in a flat directory at the root level. The
-    output directory setting in the `output.nml` should be set to `./output`.
+    `body` is expected to contain base64 encoded bytes that decode into a
+    tar-gzip file containing the essential input files to JULES, including
+    namelists, ancilliary files and forcing files. The tar-gzip archive should
+    have all files in a flat directory at the root level. The output directory
+    setting in the `output.nml` should be set to `./output`.
     """
-    with tarfile.open(fileobj=BytesIO(b64decode(event['body']))) as handle:
+    with tarfile.open(fileobj=BytesIO(b64decode(body))) as handle:
         handle.extractall()
 
 
