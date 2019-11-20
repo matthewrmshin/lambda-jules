@@ -35,5 +35,5 @@ Resources:
       Handler: index.handler
       MemorySize: 128
       Role: !GetAtt SampleLambdaExecutionRole.Arn
-      Runtime: python3.8
+      Runtime: python3.7
       Timeout: 120
