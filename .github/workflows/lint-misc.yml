@@ -16,5 +16,5 @@ jobs:
     - name: Run 
       run: |
         sudo apt install -y python3-pip
-        sudo pip3 install setuptools cfn-lint
+        pip3 install cfn-lint
         cfn-lint cfn/*.cfn.*
