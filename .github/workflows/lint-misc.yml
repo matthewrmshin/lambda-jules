@@ -13,8 +13,11 @@ jobs:
       run: |
         sudo apt install -y shellcheck
         shellcheck bin/*
-    - name: Run 
+    - name: Run cfn-lint
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
       run: |
-        sudo apt install -y python3-pip
-        pip3 install cfn-lint
+        python -m pip install --upgrade pip
+        pip install cfn-lint
         cfn-lint cfn/*.cfn.*
