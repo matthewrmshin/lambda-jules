@@ -9,6 +9,8 @@ cfn-deploy() {
     local NAME="$1"
     shift 1
     echo "Deploy: ${NAME}"
+    # --tags ... cannot be quoted or the format will mess up.
+    # shellcheck disable=SC2046
     aws cloudformation deploy \
         --stack-name="${NAME}" \
         --template-file="${HERED}/cfn/${NAME}.cfn.yaml" \
