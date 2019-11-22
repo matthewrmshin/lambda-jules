@@ -1,6 +1,6 @@
 #!/bin/bash
 # -----------------------------------------------------------------------------
-# (C) Copyright 2019 British Crown (Met Office) & Contributors.
+# (C) Copyright 2019 British Crown (Met Office) & Contributors
 # -----------------------------------------------------------------------------
 set -eu
 set -o pipefail
@@ -8,11 +8,12 @@ set -o pipefail
 cfn-deploy() {
     local NAME="$1"
     shift 1
+    echo "Deploy: ${NAME}"
     aws cloudformation deploy \
         --stack-name="${NAME}" \
         --template-file="${HERED}/cfn/${NAME}.cfn.yaml" \
         "$@" \
-        --tags "$(<"${HERED}/cfn/tags.txt")" 
+        --tags $(<"${HERED}/cfn/tags.txt")
 }
 
 if ! aws --version 1>'/dev/null'; then
@@ -20,22 +21,20 @@ if ! aws --version 1>'/dev/null'; then
     exit 1
 fi
 
-if [[ ! -f './lambda-jules.zip' ]]; then
-    echo './lambda-jules.zip not found.' >&2
+LAMBDA_JULES_ZIP="${1:-./lambda-jules.zip}"
+if [[ ! -f "${LAMBDA_JULES_ZIP}" ]]; then
+    echo "${LAMBDA_JULES_ZIP} not found." >&2
     exit 1
 fi
-#JULES_SOURCE="$1"
-#JULES_TEST_SOURCE="$2"
 
-# Work in a temporary space
 HERED="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Deploy
-cfn-deploy 'package-bucket'
+cfn-deploy 'zip-packs'
 PACKAGE_BUCKET="$( \
     aws cloudformation list-exports \
-    --output=text --query='Exports[?name=="package-bucket"].Value')"
-aws s3 cp "./lambda-jules.zip" "s3://${PACKAGE_BUCKET}/"
+    --output=text --query='Exports[?name=="zip-packs"].Value')"
+aws s3 cp "${LAMBDA_JULES_ZIP}" "s3://${PACKAGE_BUCKET}/"
 cfn-deploy 'lambda-jules' --capabilities='CAPABILITY_IAM'
 
 exit

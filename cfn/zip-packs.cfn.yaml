@@ -1,0 +1,14 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Bucket for lambda deployment packages etc
+
+Resources:
+  Bucket:
+    Type: AWS::S3::Bucket
+
+Outputs:
+  StackBucket:
+    Description: Bucket for lambda deployment packages etc
+    Value: !Ref Bucket
+    Export:
+      Name: !Sub "${AWS::StackName}"
