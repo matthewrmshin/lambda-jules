@@ -15,6 +15,6 @@ jobs:
         shellcheck bin/*
     - name: Run 
       run: |
-        sudo apt install -y npm
-        sudo npm install cfn-lint
+        sudo apt install -y python3-pip
+        sudo pip3 install cfn-lint
         cfn-lint cfn/*.cfn.*
