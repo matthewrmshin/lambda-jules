@@ -1,5 +1,6 @@
 <p>
   <a href="https://github.com/matthewrmshin/lambda-jules/actions"><img alt="GitHub Actions status" src="https://github.com/matthewrmshin/lambda-jules/workflows/Python%20application/badge.svg"></a>
+  <a href="https://github.com/matthewrmshin/lambda-jules/actions"><img alt="GitHub Actions status" src="https://github.com/matthewrmshin/lambda-jules/workflows/Lint%20misc%20files/badge.svg"></a>
 </p>
 
 # What is this?
