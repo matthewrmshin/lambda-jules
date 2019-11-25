@@ -35,7 +35,7 @@ HERED="$(cd "$(dirname "$0")/.." && pwd)"
 cfn-deploy 'zip-packs'
 PACKAGE_BUCKET="$( \
     aws cloudformation list-exports \
-    --output=text --query='Exports[?name=="zip-packs"].Value')"
+    --output=text --query="Exports[?Name=='zip-packs'].Value")"
 aws s3 cp "${LAMBDA_JULES_ZIP}" "s3://${PACKAGE_BUCKET}/"
 cfn-deploy 'lambda-jules' --capabilities='CAPABILITY_IAM'
 
