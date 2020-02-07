@@ -35,10 +35,10 @@ docker run --rm \
     -u "$(id -u):$(id -g)" \
     -v "${JULES_SOURCE}:/opt/jules" \
     -v "${HERED}/etc/fcm-make/platform/lambda.cfg:/opt/jules/etc/fcm-make/platform/lambda.cfg" \
-    -v "${PWD}:/tmp/jules-build" \
+    -v "${PWD}:/tmp/myapp" \
+    -e JULES_PLATFORM='lambda' \
     "${IMAGE_ENV}" \
-    env JULES_PLATFORM='lambda' \
-    fcm make -C '/tmp/jules-build' -f '/opt/jules/etc/fcm-make/make.cfg' \
+    fcm make -f '/opt/jules/etc/fcm-make/make.cfg' \
     'build.target=jules.exe'
 
 # Prepare the package
@@ -52,7 +52,7 @@ cp -pr "${HERED}/task/"* 'package/'
 
 # Test the package
 #docker run --rm -u "$(id -u):$(id -g)" -v "${PWD}/package:/var/task" \
-#    'lambci/lambda:python3.7' 'index.handler'
+#    'lambci/lambda:python3.8' 'index.handler'
 
 # Create the package zip file
 pushd 'package'  # "${WORKD}" => "${WORKD}/package"
