@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: JULES as Lambda invoked by configuration upload to S3 bucket
+
+Parameters:
+  ArtifactsBucket:
+    Description: Name of bucket containing artifacts, e.g. Lambda packages
+    Type: String
+  PythonRuntime:
+    Description: Lambda Python runtime version
+    Default: python3.8
+    Type: String
+  SourceRev:
+    Description: Revision string of source
+    Type: String
+
+Resources:
+  ConfigBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: !Ref Lambda
+  OutputBucket:
+    Type: AWS::S3::Bucket
+  Lambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref ArtifactsBucket
+        S3Key: !Sub "${SourceRev}/lambdas/function.zip"
+      Description: Run JULES with input in Config Bucket
+      Environment:
+        Variables:
+          OUTPUT_BUCKET: !Ref OutputBucket
+      Handler: function.handler
+      MemorySize: 1024
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: !Ref PythonRuntime
+      Timeout: 120
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt Lambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !GetAtt ConfigBucket.Arn
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:*
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref Lambda]]
+      RetentionInDays: 3

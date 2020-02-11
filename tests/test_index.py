@@ -58,7 +58,7 @@ def test_run_jules(monkeypatch):
         return 'SGVsbG8K'
 
     monkeypatch.setenv(
-        'LAMBDA_JULES_EXE',
+        'JULES_EXE',
         os.path.join(os.path.dirname(__file__), 'mock-jules-exe'))
     orig_dir = os.getcwd()
     monkeypatch.setattr(task.index, 'unpack_input', mock_unpack_input)

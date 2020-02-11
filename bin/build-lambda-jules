@@ -35,20 +35,11 @@ docker run --rm \
     -u "$(id -u):$(id -g)" \
     -v "${JULES_SOURCE}:/opt/jules" \
     -v "${HERED}/etc/fcm-make/platform/lambda.cfg:/opt/jules/etc/fcm-make/platform/lambda.cfg" \
-    -v "${PWD}:/tmp/myapp" \
+    -v "${PWD}/package:/tmp/package" \
     -e JULES_PLATFORM='lambda' \
     "${IMAGE_ENV}" \
-    fcm make -f '/opt/jules/etc/fcm-make/make.cfg' \
-    'build.target=jules.exe'
-
-# Prepare the package
-# - Make sure shared object libraries are in place
-mkdir -p 'package/bin' 'package/lib'
-cp -p 'build/bin/jules.exe' 'package/bin/'
-docker run --rm -u "$(id -u):$(id -g)" -v "${PWD}/package/lib:/tmp/package/lib" \
-    "${IMAGE_ENV}" \
-    bash -c 'cp -p /var/task/lib/*.so* /tmp/package/lib/'
-cp -pr "${HERED}/task/"* 'package/'
+    fcm make -f '/opt/jules/etc/fcm-make/make.cfg' 'build.target=jules.exe'
+cp -pr "${HERED}/task/"* './package/'
 
 # Test the package
 #docker run --rm -u "$(id -u):$(id -g)" -v "${PWD}/package:/var/task" \

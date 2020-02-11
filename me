@@ -1,0 +1,186 @@
+#!/bin/bash
+#------------------------------------------------------------------------------
+# Copyright (C) 2019-2020 British Crown (Met Office) & Contributors
+#------------------------------------------------------------------------------
+# Usage:
+#
+#   # Display Help.
+#   me help
+#   me usage
+#
+#   # Make sure you are using the correct profile for the role.
+#   export AWS_PROFILE=<profile-name-for-role>
+#
+#   # Deploy an application,
+#   # where <variant> is a name under "variants/".
+#   me deploy <variant>
+#   me deploy stf-jules-dev  # E.g. deploy stf-jules-dev
+#
+#   # Destroy an application deployment when no longer used,
+#   # where <variant> is a name under "variants/".
+#   me destroy <variant>
+#   me destroy stf-jules-dev  # E.g. destroy the deployed stf-jules-dev
+#
+# Notes:
+#
+#   1. Commands may prompt for multi-factor authentication.
+#   2. JULES build requires:
+#      * Docker
+#      * JULES source tree based on vn5.6 under "jules-sources/".
+#
+# Environment variables:
+#
+#   JULES_SOURCE - Location of JULES source tree (default="./jules-source")
+#------------------------------------------------------------------------------
+
+set -euo pipefail
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+
+me::deploy() {
+    local VARIANT="$1"
+    local VARIANTD="${HERE}/variants/${VARIANT}"
+    local STACK0="${VARIANT}-artifacts"
+    local STACK1="${VARIANT}-main"
+    # Check uncommitted changes
+    pushd "${HERE}"
+    if git diff-index --quiet HEAD --; then
+        SOURCEREV="$(git describe --always)"
+    else
+        echo "${HERE}: abort on uncommitted changes in source directory." >&2
+        exit 1
+    fi
+    popd
+    # Lint cloudformation templates
+    cfn-lint -I "${HERE}/functions/**/cfn.yaml"
+    # Display current caller identity
+    aws sts get-caller-identity
+    # S3 bucket for storing deployment artifacts, e.g. Lambda packages
+    # shellcheck disable=SC2046
+    cfn::deploy-stack "${STACK0}" \
+        --template-file "${HERE}/functions/${STACK0#${VARIANT}-}/cfn.yaml" \
+        --tags $(< "${VARIANTD}/tags.txt") \
+        --no-fail-on-empty-changeset
+    local ARTIFACTS_BUCKET
+    ARTIFACTS_BUCKET="$(cfn::get-resource-id "${STACK0}" 'Bucket')"
+    # Artifact - Lambda package
+    me::artifact-create \
+        "s3://${ARTIFACTS_BUCKET}/${SOURCEREV}/lambdas/$(basename "${NAME}" '.py').zip" \
+        me::build-main-package "${HERE}"
+    # shellcheck disable=SC2046
+    cfn::deploy-stack "${STACK1}" \
+        --capabilities='CAPABILITY_IAM' \
+        --template-file "${HERE}/functions/${STACK1#${VARIANT}-}/cfn.yaml" \
+        --parameter-overrides \
+            "ArtifactsBucket=${ARTIFACTS_BUCKET}" \
+            "SourceRev=${SOURCEREV}" \
+        --tags $(< "${VARIANTD}/tags.txt") \
+        --no-fail-on-empty-changeset
+}
+
+me::destroy() {
+    local VARIANT="$1"
+    local VARIANTD="${HERE}/variants/${VARIANT}"
+    local STACK0="${VARIANT}-artifacts"
+    local STACK1="${VARIANT}-main"
+    # Destroy the MO Service Hub data service stack, e.g. subscribe and ingest
+    cfn::s3-purge "${STACK1}" 'ConfigBucket' 'OutputBucket'
+    cfn::delete-stack "${STACK1}"
+    # Remove contents in artifacts bucket, then the stack itself
+    cfn::s3-purge "${STACK0}" 'Bucket'
+    cfn::delete-stack "${STACK0}"
+}
+
+me::help() {
+    sed -n '/^# Usage:$/,/^#-\+$/ {s/^#$//p; s/^# //p}' "$0"
+}
+
+me::usage() {
+    me::help "$@"
+}
+
+me::artifact-create() {
+    # Create ./package/python/ and cd to ./package/. Run "$2 ...".
+    # Zip content, then upload resulting artifact to "$1".
+    local DEST="$1"
+    shift 1
+    local WORKD
+    WORKD="$(mktemp -d)"
+    pushd "${WORKD}"
+    mkdir -p './package/'
+    "$@"
+    pushd './package/'
+    zip -r9 "../package.zip" .
+    popd  # 'package'
+    aws s3 cp 'package.zip' "${DEST}"
+    popd  # "${WORKD}"
+    rm -fr "${WORKD}"
+}
+
+me::build-main-package() {
+    local HERE="$1"
+    docker run --rm \
+        -u "$(id -u):$(id -g)" \
+        -v "${JULES_SOURCE:-${HERE}/jules-source}:/opt/jules" \
+        -v "${HERE}/etc/fcm-make/platform/lambda.cfg:/opt/jules/etc/fcm-make/platform/lambda.cfg" \
+        -v "${PWD}/package:/tmp/package" \
+        -e JULES_PLATFORM='lambda' \
+        'matthewrmshin/lambda-gfortran-fcm-make-netcdf' \
+        fcm make -f '/opt/jules/etc/fcm-make/make.cfg' 'build.target=jules.exe'
+    cp -p "${HERE}/functions/main/function.py" './package/'
+}
+
+cfn::get-resource-id() {
+    # Get physical resource ID for resource by created by Cloudformation.
+    local STACK="$1"
+    local RESOURCE="$2"
+    aws cloudformation describe-stack-resource \
+        --stack-name "${STACK}" \
+        --logical-resource-id "${RESOURCE}" \
+        --output 'text' \
+        --query 'StackResourceDetail.PhysicalResourceId'
+}
+
+cfn::delete-stack() {
+    # Wrap `aws cloudformation delete-stack ...`
+    local STACK="$1"
+    set -x
+    aws cloudformation delete-stack --stack-name "${STACK}"
+    aws cloudformation 'wait' 'stack-delete-complete' --stack-name "${STACK}"
+    { set +x; } 2>'/dev/null'
+}
+
+cfn::deploy-stack() {
+    # Wrap `aws cloudformation deploy-stack ...`
+    local STACK="$1"
+    shift 1
+    set -x
+    aws cloudformation deploy --stack-name "${STACK}" "$@"
+    { set +x; } 2>'/dev/null'
+}
+
+cfn::s3-purge() {
+    # Remove buckets created by Cloudformation.
+    local STACK="$1"
+    shift 1
+    for BUCKET_RESOURCE in "$@"; do
+        local BUCKET
+        BUCKET="$(cfn::get-resource-id "${STACK}" "${BUCKET_RESOURCE}")"
+        aws s3 rm --recursive "s3://${BUCKET}/"
+        aws s3 rb "s3://${BUCKET}/"
+    done
+}
+
+main() {
+    local ACTION="$1"
+    shift 1
+    if declare -F "me::${ACTION}" 1>'/dev/null' 2>&1; then
+        "me::${ACTION}" "$@"
+        exit
+    else
+        echo "${ACTION}: action not recognised." >&2
+        exit 1
+    fi
+}
+
+main "$@"
