@@ -84,6 +84,22 @@ me::deploy() {
             "SourceRev=${SOURCEREV}" \
         --tags $(< "${VARIANTD}/tags.txt") \
         --no-fail-on-empty-changeset
+    local CONFIG_BUCKET
+    CONFIG_BUCKET="$(cfn::get-resource-id "${STACK1}" 'ConfigBucket')"
+    local LAMBDA
+    LAMBDA="$(cfn::get-resource-id "${STACK1}" 'Lambda')"
+    aws s3api put-bucket-notification-configuration \
+        --bucket "${CONFIG_BUCKET}" \
+        --notification-configuration '
+            {
+                "LambdaFunctionConfigurations": [
+                    {
+                        "LambdaFunctionArn": "'"${LAMBDA}"'",
+                        "Events": ["s3:ObjectCreated:*"]
+                    }
+                ]
+            }
+        '
 }
 
 me::destroy() {

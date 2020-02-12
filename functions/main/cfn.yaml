@@ -16,11 +16,12 @@ Parameters:
 Resources:
   ConfigBucket:
     Type: AWS::S3::Bucket
-    Properties:
-      NotificationConfiguration:
-        LambdaConfigurations:
-          - Event: "s3:ObjectCreated:*"
-            Function: !GetAtt Lambda.Arn
+    # Note: This is a known AWS bug. Documented by does not work.
+    # Properties:
+    #   NotificationConfiguration:
+    #     LambdaConfigurations:
+    #       - Event: "s3:ObjectCreated:*"
+    #         Function: !GetAtt Lambda.Arn
   OutputBucket:
     Type: AWS::S3::Bucket
   Lambda:
