@@ -42,6 +42,7 @@ def handler(event: dict, _):
         tempdir = TemporaryDirectory()
         os.chdir(tempdir.name)
         try:
+            logging.info(record)
             load_config(record)
             run(
                 [os.getenv('JULES_EXE', JULES_EXE)],
@@ -49,12 +50,11 @@ def handler(event: dict, _):
                 stdout=open(os.path.basename(JULES_EXE) + '.log', 'wb'),
                 stderr=STDOUT,
             )
-            save_result(record)
-            tidy_config(record)
         except Exception as exc:
             logging.exception(exc)
-            continue
         finally:
+            save_result(record)
+            tidy_config(record)
             os.chdir(origdir)  # Make sure we are no longer in tempdir
             tempdir.cleanup()
 
