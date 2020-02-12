@@ -19,7 +19,7 @@ Resources:
     Properties:
       NotificationConfiguration:
         LambdaConfigurations:
-          - Event: s3:ObjectCreated:*
+          - Event: "s3:ObjectCreated:*"
             Function: !GetAtt Lambda.Arn
   OutputBucket:
     Type: AWS::S3::Bucket
