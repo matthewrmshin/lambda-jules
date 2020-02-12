@@ -134,7 +134,7 @@ me::build-main-package() {
         -v "${PWD}/package:/tmp/package" \
         -e JULES_PLATFORM='lambda' \
         'matthewrmshin/lambda-gfortran-fcm-make-netcdf' \
-        fcm make -f '/opt/jules/etc/fcm-make/make.cfg' 'build.target=jules.exe'
+        -f '/opt/jules/etc/fcm-make/make.cfg' 'build.target=jules.exe'
     cp -p "${HERE}/functions/main/function.py" './package/'
 }
 
