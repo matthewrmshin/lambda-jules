@@ -42,7 +42,6 @@ def handler(event: dict, _):
         tempdir = TemporaryDirectory()
         os.chdir(tempdir.name)
         try:
-            logging.info(record)
             load_config(record)
             run(
                 [os.getenv('JULES_EXE', JULES_EXE)],
@@ -51,6 +50,7 @@ def handler(event: dict, _):
                 stderr=STDOUT,
             )
         except Exception as exc:
+            logging.warning(record)
             logging.exception(exc)
         finally:
             save_result(record)
@@ -67,6 +67,7 @@ def load_config(record: dict) -> None:
     """
     bio = BytesIO()
     _input_s3_object(record).download_fileobj(bio)
+    bio.seek(0, 0)
     with tarfile.open(fileobj=bio) as handle:
         handle.extractall()
 
@@ -81,6 +82,7 @@ def save_result(record: dict) -> None:
     with tarfile.open(fileobj=bio, mode='w:gz') as handle:
         for name in sorted(os.listdir()):
             handle.add(name, recursive=True)
+    bio.seek(0, 0)
     S3.Object(
         os.getenv('OUTPUT_BUCKET'),
         record['s3']['object']['key'],
