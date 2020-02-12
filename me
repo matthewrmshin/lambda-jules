@@ -84,17 +84,22 @@ me::deploy() {
             "SourceRev=${SOURCEREV}" \
         --tags $(< "${VARIANTD}/tags.txt") \
         --no-fail-on-empty-changeset
+    # Add Bucket notification configuration to trigger Lambda
     local CONFIG_BUCKET
     CONFIG_BUCKET="$(cfn::get-resource-id "${STACK1}" 'ConfigBucket')"
     local LAMBDA
     LAMBDA="$(cfn::get-resource-id "${STACK1}" 'Lambda')"
+    local LAMBDA_ARN
+    LAMBDA_ARN="$( \
+        aws lambda get-function --function-name "${LAMBDA}" \
+        --query Configuration.FunctionArn --output text)"
     aws s3api put-bucket-notification-configuration \
         --bucket "${CONFIG_BUCKET}" \
         --notification-configuration '
             {
                 "LambdaFunctionConfigurations": [
                     {
-                        "LambdaFunctionArn": "'"${LAMBDA}"'",
+                        "LambdaFunctionArn": "'"${LAMBDA_ARN}"'",
                         "Events": ["s3:ObjectCreated:*"]
                     }
                 ]
