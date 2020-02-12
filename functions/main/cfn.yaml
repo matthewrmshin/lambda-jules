@@ -28,7 +28,7 @@ Resources:
     Properties:
       Code:
         S3Bucket: !Ref ArtifactsBucket
-        S3Key: !Sub "${SourceRev}/lambdas/function.zip"
+        S3Key: !Sub "${SourceRev}/lambdas/main.zip"
       Description: Run JULES with input in Config Bucket
       Environment:
         Variables:

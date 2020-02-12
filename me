@@ -30,7 +30,7 @@
 #
 # Environment variables:
 #
-#   JULES_SOURCE - Location of JULES source tree (default="./jules-source")
+#   JULES_SOURCE - Location of JULES source tree (default="jules-source/")
 #------------------------------------------------------------------------------
 
 set -euo pipefail
@@ -51,6 +51,14 @@ me::deploy() {
         exit 1
     fi
     popd
+    # Check required software
+    local NAME
+    for NAME in aws cfn-lint docker; do
+        if ! "${NAME}" --version 1>'/dev/null' 2>&1; then
+            echo "Sorry, this script requires ${NAME}" >&2
+            exit 1
+        fi
+    done
     # Lint cloudformation templates
     cfn-lint -I "${HERE}/functions/**/cfn.yaml"
     # Display current caller identity
@@ -65,7 +73,7 @@ me::deploy() {
     ARTIFACTS_BUCKET="$(cfn::get-resource-id "${STACK0}" 'Bucket')"
     # Artifact - Lambda package
     me::artifact-create \
-        "s3://${ARTIFACTS_BUCKET}/${SOURCEREV}/lambdas/$(basename "${NAME}" '.py').zip" \
+        "s3://${ARTIFACTS_BUCKET}/${SOURCEREV}/lambdas/main.zip" \
         me::build-main-package "${HERE}"
     # shellcheck disable=SC2046
     cfn::deploy-stack "${STACK1}" \
