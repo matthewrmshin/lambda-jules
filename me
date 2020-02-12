@@ -130,6 +130,7 @@ me::build-main-package() {
     docker run --rm \
         -u "$(id -u):$(id -g)" \
         -v "${JULES_SOURCE:-${HERE}/jules-source}:/opt/jules" \
+        -v "${PWD}:/tmp/myapp" \
         -v "${HERE}/etc/fcm-make/platform/lambda.cfg:/opt/jules/etc/fcm-make/platform/lambda.cfg" \
         -v "${PWD}/package:/tmp/package" \
         -e JULES_PLATFORM='lambda' \
