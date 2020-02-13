@@ -7,22 +7,25 @@
 
 This project documents how to build and deploy JULES as an AWS Lambda.
 
+![S3->Lambda->S3](./images/S3-Lambda-S3.svg)
+
 The template contains:
 * A S3 *Configuration* Bucket.
   * Expect each uploaded object to be TAR-GZIP archive.
   * Each TAR-GZIP archive contains input namelists and forcing files for JULES
     at the root level.
-  * Triggers the Lambda.
+  * Triggers the Lambda when an object is uploaded.
 * A S3 *Output* Bucket.
   * Each output object will be a TAR-GZIP archive.
   * Each TAR-GZIP archive contains all the input files + output files of a run.
-  * STDOUT and STDERR from JULES are sent to `jules.exe.log`.
+  * STDOUT and STDERR from JULES are sent to `jules.exe.log`, so available for
+    inspection as part of an output archive.
 * A Lambda that runs a Python wrapper to:
-  * Read upload events from the Configuration Bucket.
-  * Download input object from the Configuration Bucket and extract content.
+  * Read events from the Configuration Bucket.
+  * Download the input object from the Configuration Bucket and extract content.
   * Run JULES with the extracted input files.
   * Archive output and upload to the Output Bucket.
-  * Delete object from Config Bucket.
+  * Delete the input object from the Configuration Bucket.
 
 ## How to Deploy
 
