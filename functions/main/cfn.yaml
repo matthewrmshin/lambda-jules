@@ -16,7 +16,7 @@ Parameters:
 Resources:
   ConfigBucket:
     Type: AWS::S3::Bucket
-    # Note: This is a known AWS bug. Documented by does not work.
+    # Note: This is a known AWS bug. Documented method does not work.
     # Properties:
     #   NotificationConfiguration:
     #     LambdaConfigurations:
