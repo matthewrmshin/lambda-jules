@@ -1,4 +1,0 @@
-#!/bin/bash
-set -eu
-set -o pipefail
-exit "${MOCK_JULES_EXE_RETURN:-0}"

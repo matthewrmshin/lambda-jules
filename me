@@ -85,26 +85,8 @@ me::deploy() {
         --tags $(< "${VARIANTD}/tags.txt") \
         --no-fail-on-empty-changeset
     # Add Bucket notification configuration to trigger Lambda
-    local CONFIG_BUCKET
-    CONFIG_BUCKET="$(cfn::get-resource-id "${STACK1}" 'ConfigBucket')"
-    local LAMBDA
-    LAMBDA="$(cfn::get-resource-id "${STACK1}" 'Lambda')"
-    local LAMBDA_ARN
-    LAMBDA_ARN="$( \
-        aws lambda get-function --function-name "${LAMBDA}" \
-        --query Configuration.FunctionArn --output text)"
-    aws s3api put-bucket-notification-configuration \
-        --bucket "${CONFIG_BUCKET}" \
-        --notification-configuration '
-            {
-                "LambdaFunctionConfigurations": [
-                    {
-                        "LambdaFunctionArn": "'"${LAMBDA_ARN}"'",
-                        "Events": ["s3:ObjectCreated:*"]
-                    }
-                ]
-            }
-        '
+    # Note: This cannot be done in Cloudformation due to known bug.
+    me::add-bucket-notification-configuration "${STACK1}"
 }
 
 me::destroy() {
@@ -147,6 +129,7 @@ me::artifact-create() {
 }
 
 me::build-main-package() {
+    # Build JULES and copy Lambda handler model in package directory
     local HERE="$1"
     docker run --rm \
         -u "$(id -u):$(id -g)" \
@@ -158,6 +141,31 @@ me::build-main-package() {
         'matthewrmshin/lambda-gfortran-fcm-make-netcdf' \
         -f '/opt/jules/etc/fcm-make/make.cfg' 'build.target=jules.exe'
     cp -p "${HERE}/functions/main/function.py" './package/'
+}
+
+me::add-bucket-notification-configuration() {
+    # Add Bucket notification configuration to trigger Lambda
+    local STACK1="$1"
+    local CONFIG_BUCKET
+    CONFIG_BUCKET="$(cfn::get-resource-id "${STACK1}" 'ConfigBucket')"
+    local LAMBDA
+    LAMBDA="$(cfn::get-resource-id "${STACK1}" 'Lambda')"
+    local LAMBDA_ARN
+    LAMBDA_ARN="$( \
+        aws lambda get-function --function-name "${LAMBDA}" \
+        --query Configuration.FunctionArn --output text)"
+    aws s3api put-bucket-notification-configuration \
+        --bucket "${CONFIG_BUCKET}" \
+        --notification-configuration '
+            {
+                "LambdaFunctionConfigurations": [
+                    {
+                        "LambdaFunctionArn": "'"${LAMBDA_ARN}"'",
+                        "Events": ["s3:ObjectCreated:*"]
+                    }
+                ]
+            }
+        '
 }
 
 cfn::get-resource-id() {

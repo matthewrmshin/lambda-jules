@@ -7,54 +7,41 @@
 
 This project documents how to build and deploy JULES as an AWS Lambda.
 
-## Building Fortran executable for AWS Lambda
+The template contains:
+* A S3 *Configuration* Bucket.
+  * Expect each uploaded object to be TAR-GZIP archive.
+  * Each TAR-GZIP archive contains input namelists and forcing files for JULES
+    at the root level.
+  * Triggers the Lambda.
+* A S3 *Output* Bucket.
+  * Each output object will be a TAR-GZIP archive.
+  * Each TAR-GZIP archive contains all the input files + output files of a run.
+  * STDOUT and STDERR from JULES are sent to `jules.exe.log`.
+* A Lambda that runs a Python wrapper to:
+  * Read upload events from the Configuration Bucket.
+  * Download input object from the Configuration Bucket and extract content.
+  * Run JULES with the extracted input files.
+  * Archive output and upload to the Output Bucket.
+  * Delete object from Config Bucket.
 
-Current efforts documented in these projects:
-* [lambda-gfortran-fcm-make-netcdf](https://github.com/matthewrmshin/lambda-gfortran-fcm-make-netcdf)
-  Dockerfile based on AWS Lambda Python 3.7 runtime environment,
-  with GFortran, FCM Make and netCDF libraries.
+## How to Deploy
 
-Note: To use the docker image. You will need to be in an environment that can run
-[Docker](https://www.docker.com/). The easiest way is to use an Amazon EC2
-instance by following the instructions:
-* [Setting Up with Amazon EC2](https://docs.aws.amazon.com/en_pv/AWSEC2/latest/UserGuide/get-set-up-for-amazon-ec2.html)
-* [Getting Started with Amazon EC2 Linux Instances](https://docs.aws.amazon.com/en_pv/AWSEC2/latest/UserGuide/EC2_GetStarted.html)
-* [Docker Basics for Amazon ECS](https://docs.aws.amazon.com/en_pv/AmazonECS/latest/developerguide/docker-basics.html)
+You need an environment that has:
+* AWS CLI and cfn-lint utilities.
+* Enough access to create resources in your AWS account via the AWS CLI.
+* Docker.
 
-## Building the Lambda Package
+(I use an EC2 instance.)
 
-1. Get JULES, export a suitable source tree from
-   [MOSRS](https://code.metoffice.gov.uk/). (Account required.)
-   a. Run `svn pget fcm:revision https://code.metoffice.gov.uk/svn/jules/main`
-      to find out the revision numbers of release versions or just go for trunk@HEAD.
-   b. Run, for example, `svn export https://code.metoffice.gov.uk/svn/jules/main/trunk@15927 jules-5.6`
-      to get a source tree for vn5.6.
-2. Make sure you have write access to the current working directory.
-3. Clone this project. E.g. `git clone https://github.com/matthewrmshin/lambda-jules.git`.
-4. Run `./lambda-jules/bin/build-lambda-jules /path/to/jules` where
-   `/path/to/jules` is the path to the JULES source tree you exported from
-   MOSRS in step 1.
-5. The lambda package will be written to `./lambda-jules.zip`.
+You will also need a copy of JULES vn5.6 or above. Copy or symbolic link the
+JULES source tree to under `jules_source/` of this project or
+`export JULES_SOURCE` to point to the location of the JULES source tree.
 
-## Deploying the Lambda Package
+To deploy, run `./me deploy stf-jules-dev`.
 
-1. After building the package, run `./lambda-jules/bin/deploy-lambda-jules`.
-
-## How to Create an Input Package for the Lambda
-
-For now... Choose a suitable [Rose](https://github.com/metomi/rose/) application configuration
-with JULES input. Inspect the `rose-app.conf`. Set:
-* Any location based variables to `.`. Note current locations of these input files.
-* Search for other environment variables substitution syntax. Make sure they are resolved.
-* Create a new directory elsewhere and change directory to it.
-  E.g. `mkdir /var/tmp/jules-sample-inputs; cd /var/tmp/jules-sample-inputs`.
-* Run `rose app-run -C $OLDPWD true`.
-* Make sure all other input files are copied in.
-* Set output directory to `./output`.
-* Tar-gzip the content so that the input files are all under the root location
-  in the archive.
+When the stack is no longer required, run `./me destroy stf-jules.dev`.
 
 ## What's Next?
 
-Add Cloudformation for API Gateway. Convert to SAM template.
-Set up tests in AWS CodePipeline.
+Convert to SAM template.
+Set up build and deployment in AWS CodePipeline.
