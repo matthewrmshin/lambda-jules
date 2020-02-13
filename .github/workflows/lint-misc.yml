@@ -12,7 +12,8 @@ jobs:
     - name: Run shellcheck
       run: |
         shellcheck ./me
-    - name: Run cfn-lint
-      run: |
-        pip install cfn-lint
-        cfn-lint ./cfn/*.cfn.*
+    # Doesn't work at the moment, because command does not yet know Python3.8
+    # - name: Run cfn-lint
+    #   run: |
+    #     pip install cfn-lint
+    #     cfn-lint ./cfn/*.cfn.*
