@@ -195,6 +195,8 @@ cfn::deploy-stack() {
     set -x
     aws cloudformation deploy --stack-name "${STACK}" "$@"
     { set +x; } 2>'/dev/null'
+    aws cloudformation describe-stacks --stack-name "${STACK}" \
+        --query 'Stacks[0].Outputs'
 }
 
 cfn::s3-purge() {
