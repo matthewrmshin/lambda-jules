@@ -81,3 +81,11 @@ Resources:
     Properties:
       LogGroupName: !Join ["", ["/aws/lambda/", !Ref Lambda]]
       RetentionInDays: 3
+
+Outputs:
+  ConfigBucketName:
+    Description: Name of bucket to upload archives with JULES inputs
+    Value: !Ref ConfigBucket
+  OutputBucketName:
+    Description: Name of bucket where archived JULES outputs are sent
+    Value: !Ref OutputBucket
