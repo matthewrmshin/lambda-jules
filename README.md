@@ -36,9 +36,9 @@ You need an environment that has:
 
 (I use an EC2 instance.)
 
-You will also need a copy of JULES vn5.6 or above. Copy or symbolic link the
-JULES source tree to under `jules_source/` of this project or
-`export JULES_SOURCE` to point to the location of the JULES source tree.
+You will also need a copy of JULES based on vn5.6 or vn5.7. Copy or symbolic
+link the JULES source tree to under `jules_source/` of this project or `export
+JULES_SOURCE` to point to the location of the JULES source tree.
 
 To deploy, run `./me deploy stf-jules-dev`.
 
